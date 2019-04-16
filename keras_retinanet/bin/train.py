@@ -245,16 +245,16 @@ def create_generators(args, preprocess_image):
 
         train_generator = CocoGenerator(
             args.coco_path,
-            'train2017',
             transform_generator=transform_generator,
             **common_args
         )
-
-        validation_generator = CocoGenerator(
-            args.coco_path,
-            'val2017',
-            **common_args
-        )
+        if args.val_coco_path:
+            validation_generator = CocoGenerator(
+                args.val_coco_path,
+                **common_args
+            )
+        else:
+            validation_generator = None
     elif args.dataset_type == 'pascal':
         train_generator = PascalVocGenerator(
             args.pascal_path,
@@ -363,7 +363,8 @@ def parse_args(args):
     subparsers.required = True
 
     coco_parser = subparsers.add_parser('coco')
-    coco_parser.add_argument('coco_path', help='Path to dataset directory (ie. /tmp/COCO).')
+    coco_parser.add_argument('coco_path', help='Path to the coco dataset e.g. /path/to/coco.json')
+    coco_parser.add_argument('--val-coco-path', help='Path the validation coco dataset. e.g. /path/to/coco.json')
 
     pascal_parser = subparsers.add_parser('pascal')
     pascal_parser.add_argument('pascal_path', help='Path to dataset directory (ie. /tmp/VOCdevkit).')
@@ -411,6 +412,9 @@ def parse_args(args):
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file.')
     parser.add_argument('--weighted-average', help='Compute the mAP using the weighted average of precisions among classes.', action='store_true')
     parser.add_argument('--compute-val-loss', help='Compute validation loss during training', dest='compute_val_loss', action='store_false')
+
+    parser.add_argument('--neptune-project', type=str, help='Project to push neptune metrics to')
+    parser.add_argument('--neptune-experiment', type=str, help='Name of the neptune experiment, e.g. retina_training_1')
 
     # Fit generator arguments
     parser.add_argument('--workers', help='Number of multiprocessing workers. To disable multiprocessing, set workers to 0', type=int, default=1)

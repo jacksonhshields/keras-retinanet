@@ -29,16 +29,15 @@ class CocoGenerator(Generator):
     See https://github.com/cocodataset/cocoapi/tree/master/PythonAPI for more information.
     """
 
-    def __init__(self, data_dir, set_name, **kwargs):
+    def __init__(self, coco_path, img_dir=None, **kwargs):
         """ Initialize a COCO data generator.
 
         Args
-            data_dir: Path to where the COCO dataset is stored.
-            set_name: Name of the set to parse.
+            coco_path: Path to the coco dataset
+            img_dir: Use path if you don't want to use the 'path' element
         """
-        self.data_dir  = data_dir
-        self.set_name  = set_name
-        self.coco      = COCO(os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json'))
+        self.img_dir = None  # ONLY USE IMAGE DIR IF PATH SHOULDNT BE USED
+        self.coco = COCO(coco_path)
         self.image_ids = self.coco.getImgIds()
 
         self.load_classes()
@@ -121,7 +120,12 @@ class CocoGenerator(Generator):
         """ Load an image at the image_index.
         """
         image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
-        path       = os.path.join(self.data_dir, 'images', self.set_name, image_info['file_name'])
+        if self.img_dir:
+            path = os.path.join(self.img_dir, image_info['file_name'])
+        elif 'path' in image_info:
+            path = image_info['path']
+        else:
+            path = image_info['file_name']
         return read_image_bgr(path)
 
     def load_annotations(self, image_index):
