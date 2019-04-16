@@ -25,6 +25,8 @@ import keras
 import keras.preprocessing.image
 import tensorflow as tf
 
+import neptune
+
 # Allow relative imports when being executed as script.
 if __name__ == "__main__" and __package__ is None:
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -37,6 +39,7 @@ from .. import losses
 from .. import models
 from ..callbacks import RedirectModel
 from ..callbacks.eval import Evaluate
+from ..callbacks.neptune import NeptuneMonitor
 from ..models.retinanet import retinanet_bbox
 from ..preprocessing.csv_generator import CSVGenerator
 from ..preprocessing.kitti import KittiGenerator
@@ -47,7 +50,6 @@ from ..utils.config import read_config_file, parse_anchor_parameters
 from ..utils.keras_version import check_keras_version
 from ..utils.model import freeze as freeze_model
 from ..utils.transform import random_transform_generator
-
 
 def makedirs(path):
     # Intended behavior: try to create the directory,
@@ -203,6 +205,9 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         cooldown   = 0,
         min_lr     = 0
     ))
+
+    if args.neptune_project and args.neptune_experiment:
+        callbacks.append(NeptuneMonitor())
 
     return callbacks
 
@@ -482,6 +487,26 @@ def main(args=None):
         if validation_generator:
             validation_generator.compute_shapes = train_generator.compute_shapes
 
+
+    params = {
+        'backbone': args.backbone,
+        'lr': args.lr,
+        'batch_size': args.batch_size,
+        'epochs': args.epochs,
+        'steps': args.steps,
+        'image-min-side': args.image_min_side,
+        'image-max-side': args.image_max_side,
+        'weights': args.weights,
+        'snapshot': args.snapshot,
+        'freeze_backbone': args.freeze_backbone,
+        'snapshot_path': args.snapshot_path,
+        'tensorboard_dir': args.tensorboard_dir
+    }
+
+    if args.neptune_project and args.neptune_experiment:
+        neptune.init(args.neptune_project)
+        neptune.create_experiment(args.neptune_experiment, params=params)
+
     # create the callbacks
     callbacks = create_callbacks(
         model,
@@ -512,6 +537,8 @@ def main(args=None):
         max_queue_size=args.max_queue_size,
         validation_data=validation_generator
     )
+    if args.neptune_project and args.neptune_experiment:
+        neptune.stop()
 
 
 if __name__ == '__main__':
